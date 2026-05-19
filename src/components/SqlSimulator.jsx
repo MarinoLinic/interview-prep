@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database, Sparkles, BookOpen } from 'lucide-react';
+import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database, Sparkles, BookOpen, Copy, Check } from 'lucide-react';
 import initSqlJs from 'sql.js';
 import challenges, { setupSQL } from '../data/challenges';
 import { convertLinqToSql } from '../utils/linqToSql';
@@ -22,7 +22,14 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [completedChallenges, setCompletedChallenges] = useState(new Set());
   const [freeMode, setFreeMode] = useState(false);
+  const [copied, setCopied] = useState(false);
   const textareaRef = useRef(null);
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const filtered = selectedCategory === 'All'
     ? challenges
@@ -206,7 +213,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
 
           {/* Challenge info */}
           {challenge && (
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 mb-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-6 mb-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -254,13 +261,25 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
                   {syntaxMode === 'linq' && challenge.linqHint ? challenge.linqHint : challenge.hint}
                 </p>
               )}
-              {showSolution && (
-                <pre className={`mt-3 text-sm rounded-lg p-3 overflow-x-auto whitespace-pre-wrap ${
-                  syntaxMode === 'linq' ? 'text-purple-300 bg-purple-950/70 border border-purple-800/60' : 'text-emerald-300 bg-gray-900 border border-gray-700'
-                }`}>
-                  <code>{syntaxMode === 'linq' && challenge.linqExpectedQuery ? challenge.linqExpectedQuery : challenge.expectedQuery}</code>
-                </pre>
-              )}
+              {showSolution && (() => {
+                const solutionCode = syntaxMode === 'linq' && challenge.linqExpectedQuery ? challenge.linqExpectedQuery : challenge.expectedQuery;
+                return (
+                  <div className="relative group mt-3">
+                    <pre className={`text-sm rounded-lg p-3 pr-12 overflow-x-auto whitespace-pre-wrap ${
+                      syntaxMode === 'linq' ? 'text-purple-300 bg-purple-950/70 border border-purple-800/60' : 'text-emerald-300 bg-gray-900 border border-gray-700'
+                    }`}>
+                      <code>{solutionCode}</code>
+                    </pre>
+                    <button
+                      onClick={() => handleCopy(solutionCode)}
+                      className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-700/80 hover:bg-gray-600 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Copy code"
+                    >
+                      {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                );
+              })()}
               {challenge.explanation && (
                 <div className="mt-3">
                   <button
