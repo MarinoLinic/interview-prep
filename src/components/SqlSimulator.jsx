@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database, Sparkles } from 'lucide-react';
+import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database, Sparkles, BookOpen } from 'lucide-react';
 import initSqlJs from 'sql.js';
 import challenges, { setupSQL } from '../data/challenges';
 import { convertLinqToSql } from '../utils/linqToSql';
@@ -17,6 +17,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
   const [currentChallenge, setCurrentChallenge] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
   const [passed, setPassed] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [completedChallenges, setCompletedChallenges] = useState(new Set());
@@ -117,6 +118,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
     setQueryError(null);
     setShowHint(false);
     setShowSolution(false);
+    setShowExplanation(false);
     setPassed(false);
   };
 
@@ -129,6 +131,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
     setQueryError(null);
     setShowHint(false);
     setShowSolution(false);
+    setShowExplanation(false);
     setPassed(false);
   };
 
@@ -253,10 +256,26 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
               )}
               {showSolution && (
                 <pre className={`mt-3 text-sm rounded-lg p-3 overflow-x-auto whitespace-pre-wrap ${
-                  syntaxMode === 'linq' ? 'text-purple-300 bg-purple-950 border border-purple-800' : 'text-orange-300 bg-orange-950 border border-orange-800'
+                  syntaxMode === 'linq' ? 'text-purple-300 bg-purple-950/70 border border-purple-800/60' : 'text-emerald-300 bg-gray-900 border border-gray-700'
                 }`}>
                   <code>{syntaxMode === 'linq' && challenge.linqExpectedQuery ? challenge.linqExpectedQuery : challenge.expectedQuery}</code>
                 </pre>
+              )}
+              {challenge.explanation && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowExplanation(!showExplanation)}
+                    className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                  >
+                    <BookOpen size={14} />
+                    {showExplanation ? 'Hide explanation' : 'Explain like I\'m a beginner'}
+                  </button>
+                  {showExplanation && (
+                    <div className="mt-2 p-4 bg-blue-950/30 border border-blue-900/40 rounded-lg text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                      {challenge.explanation}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Schema reference (collapsible) */}
