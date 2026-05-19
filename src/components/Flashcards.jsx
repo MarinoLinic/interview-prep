@@ -13,8 +13,8 @@ const priorityConfig = {
 export default function Flashcards({ syntaxMode = 'sql' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedPriority, setSelectedPriority] = useState('core');
+  const [selectedCategory, setSelectedCategory] = useState(() => localStorage.getItem('fc_category') || 'All');
+  const [selectedPriority, setSelectedPriority] = useState(() => localStorage.getItem('fc_priority') || 'core');
   const [shuffled, setShuffled] = useState(false);
   const [shuffleOrder, setShuffleOrder] = useState([]);
 
@@ -68,6 +68,7 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
 
   const handleCategoryChange = (cat) => {
     setSelectedCategory(cat);
+    localStorage.setItem('fc_category', cat);
     setCurrentIndex(0);
     setShowAnswer(false);
     setShuffled(false);
@@ -76,17 +77,12 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
 
   const handlePriorityChange = (priority) => {
     setSelectedPriority(priority);
+    localStorage.setItem('fc_priority', priority);
     setCurrentIndex(0);
     setShowAnswer(false);
     setShuffled(false);
     setShuffleOrder([]);
   };
-
-  if (!card) return <div className="text-center text-gray-400 p-8">No cards match your filters.</div>;
-
-  const priorityBadge = card.priority === 'core' ? 'bg-red-900 text-red-300 border border-red-700'
-    : card.priority === 'important' ? 'bg-yellow-900 text-yellow-300 border border-yellow-700'
-    : 'bg-gray-700 text-gray-400 border border-gray-600';
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -149,114 +145,127 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
         ))}
       </div>
 
-      {/* Progress */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-gray-400 text-sm">
-          Card {currentIndex + 1} of {filtered.length}
-        </span>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs px-2 py-0.5 rounded ${priorityBadge}`}>
-            {card.priority}
-          </span>
-          <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300">
-            {card.category}
-          </span>
+      {/* Empty state — filters still visible above */}
+      {!card && (
+        <div className="text-center text-gray-400 py-16 bg-gray-800 rounded-xl border border-gray-700">
+          <p className="text-lg mb-2">No cards match these filters.</p>
+          <p className="text-sm text-gray-500">Try selecting a broader priority above, or switching to "All" categories.</p>
         </div>
-      </div>
+      )}
 
-      {/* Card */}
-      <div
-        className={`bg-gray-800 rounded-xl p-8 min-h-[320px] flex flex-col cursor-pointer select-none border ${
-          card.priority === 'core' ? 'border-red-800' : card.priority === 'important' ? 'border-yellow-800' : 'border-gray-700'
-        }`}
-        onClick={() => setShowAnswer(!showAnswer)}
-      >
-        {/* Question */}
-        <h3 className="text-xl font-semibold text-white mb-4">{card.question}</h3>
+      {/* Card + controls — only when there are results */}
+      {card && (() => {
+        const priorityBadge = card.priority === 'core' ? 'bg-red-900 text-red-300 border border-red-700'
+          : card.priority === 'important' ? 'bg-yellow-900 text-yellow-300 border border-yellow-700'
+          : 'bg-gray-700 text-gray-400 border border-gray-600';
 
-        {/* Answer */}
-        {showAnswer && (() => {
-          const useLinq = syntaxMode === 'linq' && card.linqAnswer;
-          const answer = useLinq ? card.linqAnswer : card.answer;
-          const example = useLinq ? card.linqExample : card.example;
-          const codeColor = useLinq ? 'text-purple-300' : 'text-green-400';
-          const codeBorder = useLinq ? 'border-purple-800' : 'border-gray-600';
-
-          return (
-            <div className="mt-4 flex-1 animate-fade-in">
-              {useLinq && (
-                <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-purple-900 text-purple-300 border border-purple-700">
-                  LINQ / C#
+        return (
+          <>
+            {/* Progress */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-400 text-sm">
+                Card {currentIndex + 1} of {filtered.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded ${priorityBadge}`}>
+                  {card.priority}
                 </span>
-              )}
-              {!useLinq && syntaxMode === 'linq' && !card.linqAnswer && (
-                <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-gray-700 text-gray-400">
-                  No LINQ equivalent (theory)
+                <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300">
+                  {card.category}
                 </span>
-              )}
-              <p className="text-gray-200 mb-4 leading-relaxed">{answer}</p>
-              {example && (
-                <pre className={`bg-gray-900 border ${codeBorder} rounded-lg p-4 text-sm ${codeColor} overflow-x-auto whitespace-pre-wrap`}>
-                  <code>{example}</code>
-                </pre>
+              </div>
+            </div>
+
+            {/* Card */}
+            <div
+              className={`bg-gray-800 rounded-xl p-8 min-h-[320px] flex flex-col cursor-pointer select-none border ${
+                card.priority === 'core' ? 'border-red-800' : card.priority === 'important' ? 'border-yellow-800' : 'border-gray-700'
+              }`}
+              onClick={() => setShowAnswer(!showAnswer)}
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">{card.question}</h3>
+
+              {showAnswer && (() => {
+                const useLinq = syntaxMode === 'linq' && card.linqAnswer;
+                const answer = useLinq ? card.linqAnswer : card.answer;
+                const example = useLinq ? card.linqExample : card.example;
+                const codeColor = useLinq ? 'text-purple-300' : 'text-green-400';
+                const codeBorder = useLinq ? 'border-purple-800' : 'border-gray-600';
+                return (
+                  <div className="mt-4 flex-1 animate-fade-in">
+                    {useLinq && (
+                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-purple-900 text-purple-300 border border-purple-700">
+                        LINQ / C#
+                      </span>
+                    )}
+                    {!useLinq && syntaxMode === 'linq' && !card.linqAnswer && (
+                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-gray-700 text-gray-400">
+                        No LINQ equivalent (theory)
+                      </span>
+                    )}
+                    <p className="text-gray-200 mb-4 leading-relaxed">{answer}</p>
+                    {example && (
+                      <pre className={`bg-gray-900 border ${codeBorder} rounded-lg p-4 text-sm ${codeColor} overflow-x-auto whitespace-pre-wrap`}>
+                        <code>{example}</code>
+                      </pre>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {!showAnswer && (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-gray-500 italic">Click to reveal answer</p>
+                </div>
               )}
             </div>
-          );
-        })()}
 
-        {!showAnswer && (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-500 italic">Click to reveal answer</p>
-          </div>
-        )}
-      </div>
+            {/* Controls */}
+            <div className="flex items-center justify-between mt-6">
+              <button
+                data-nav="prev"
+                onClick={handlePrev}
+                className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <ChevronLeft size={18} /> Prev
+              </button>
+              <div className="flex gap-2">
+                <button
+                  data-nav="flip"
+                  onClick={() => setShowAnswer(!showAnswer)}
+                  className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  {showAnswer ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showAnswer ? 'Hide' : 'Show'}
+                </button>
+                <button
+                  onClick={handleShuffle}
+                  className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  <Shuffle size={18} /> Shuffle
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  <RotateCcw size={18} /> Reset
+                </button>
+              </div>
+              <button
+                data-nav="next"
+                onClick={handleNext}
+                className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
+              >
+                Next <ChevronRight size={18} />
+              </button>
+            </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between mt-6">
-        <button
-          data-nav="prev"
-          onClick={handlePrev}
-          className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
-        >
-          <ChevronLeft size={18} /> Prev
-        </button>
-
-        <div className="flex gap-2">
-          <button
-            data-nav="flip"
-            onClick={() => setShowAnswer(!showAnswer)}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
-          >
-            {showAnswer ? <EyeOff size={18} /> : <Eye size={18} />}
-            {showAnswer ? 'Hide' : 'Show'}
-          </button>
-          <button
-            onClick={handleShuffle}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
-          >
-            <Shuffle size={18} /> Shuffle
-          </button>
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
-          >
-            <RotateCcw size={18} /> Reset
-          </button>
-        </div>
-
-        <button
-          data-nav="next"
-          onClick={handleNext}
-          className="flex items-center gap-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
-        >
-          Next <ChevronRight size={18} />
-        </button>
-      </div>
-
-      {/* Keyboard hint */}
-      <p className="text-center text-gray-500 text-xs mt-4">
-        Tip: Use arrow keys (← →) to navigate, Space to flip
-      </p>
+            <p className="text-center text-gray-500 text-xs mt-4">
+              Tip: Use arrow keys (← →) to navigate, Space to flip
+            </p>
+          </>
+        );
+      })()}
     </div>
   );
 }

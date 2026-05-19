@@ -92,7 +92,7 @@ const challenges = [
     description: "Get all customer names along with their order totals. Only show customers who have orders.",
     hint: "Use INNER JOIN on customers and orders, linking customer id to order's customer_id",
     linqHint: "Use .Join() with customers as outer, orders as inner, matching on Id/CustomerId",
-    expectedQuery: `SELECT c.name, o.total FROM customers c INNER JOIN orders o ON c.id = o.customer_id;`,
+    expectedQuery: `SELECT customers.name, orders.total\nFROM customers\nINNER JOIN orders ON customers.id = orders.customer_id;`,
     linqExpectedQuery: `customers.Join(orders,\n    c => c.Id, o => o.CustomerId,\n    (c, o) => new { c.Name, o.Total });`,
     validateResult: (rows) => rows.length === 7 && rows[0].name !== undefined && rows[0].total !== undefined,
   },
@@ -104,7 +104,9 @@ const challenges = [
     description: "Get ALL customer names and their order totals. Customers with no orders should still appear (with NULL total).",
     hint: "LEFT JOIN keeps all rows from the left table (customers)",
     linqHint: "Use .GroupJoin() + .SelectMany() with .DefaultIfEmpty() to keep all customers",
-    expectedQuery: `SELECT c.name, o.total FROM customers c LEFT JOIN orders o ON c.id = o.customer_id;`,
+    expectedQuery: `SELECT customers.name, orders.total
+FROM customers
+LEFT JOIN orders ON customers.id = orders.customer_id;`,
     linqExpectedQuery: `customers.GroupJoin(orders,\n    c => c.Id, o => o.CustomerId,\n    (c, ords) => new { c, ords })\n.SelectMany(x => x.ords.DefaultIfEmpty(),\n    (x, o) => new { x.c.Name, Total = o?.Total });`,
     validateResult: (rows) => rows.length === 9 && rows.some(r => r.total === null),
   },
@@ -116,7 +118,10 @@ const challenges = [
     description: "Get each customer's name, their order count, and total spent. Include customers with 0 orders.",
     hint: "LEFT JOIN + GROUP BY customer. Use COUNT(o.id) not COUNT(*) to get 0 for customers without orders.",
     linqHint: "Use .GroupJoin() then project with .Count() and .Sum() on the order group",
-    expectedQuery: `SELECT c.name, COUNT(o.id) AS order_count, SUM(o.total) AS total_spent FROM customers c LEFT JOIN orders o ON c.id = o.customer_id GROUP BY c.id;`,
+    expectedQuery: `SELECT customers.name, COUNT(orders.id) AS order_count, SUM(orders.total) AS total_spent
+FROM customers
+LEFT JOIN orders ON customers.id = orders.customer_id
+GROUP BY customers.id;`,
     linqExpectedQuery: `customers.GroupJoin(orders,\n    c => c.Id, o => o.CustomerId,\n    (c, ords) => new {\n        c.Name,\n        OrderCount = ords.Count(),\n        TotalSpent = ords.Sum(o => o.Total)\n    });`,
     validateResult: (rows) => rows.length === 6 && rows.some(r => r.order_count === 0),
   },

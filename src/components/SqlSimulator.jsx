@@ -10,6 +10,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
+  const [linqDraft, setLinqDraft] = useState('');
   const [results, setResults] = useState(null);
   const [queryError, setQueryError] = useState(null);
   const [currentChallenge, setCurrentChallenge] = useState(0);
@@ -110,6 +111,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
       : (currentChallenge - 1 + filtered.length) % filtered.length;
     setCurrentChallenge(next);
     setQuery('');
+    setLinqDraft('');
     setResults(null);
     setQueryError(null);
     setShowHint(false);
@@ -121,6 +123,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
     setSelectedCategory(cat);
     setCurrentChallenge(0);
     setQuery('');
+    setLinqDraft('');
     setResults(null);
     setQueryError(null);
     setShowHint(false);
@@ -333,14 +336,36 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
         </div>
       )}
 
+      {/* LINQ Scratchpad — only shown in LINQ mode */}
+      {syntaxMode === 'linq' && (
+        <div className="bg-gray-900 border border-purple-800 rounded-xl overflow-hidden mb-4">
+          <div className="px-4 py-3 bg-purple-950 border-b border-purple-800">
+            <div className="flex items-center justify-between">
+              <span className="text-purple-300 text-sm font-medium">① Write LINQ here (C# — practice only)</span>
+              <span className="text-purple-600 text-xs">cannot be executed</span>
+            </div>
+            <p className="text-purple-400 text-xs mt-1">
+              Write how you'd express this in LINQ. Then translate it to SQL in the box below and run that to check your logic.
+            </p>
+          </div>
+          <textarea
+            value={linqDraft}
+            onChange={(e) => setLinqDraft(e.target.value)}
+            placeholder="e.g. customers.Join(orders, c => c.Id, o => o.CustomerId, (c, o) => new { c.Name, o.Total });"
+            className="w-full bg-gray-900 text-purple-300 font-mono text-sm p-4 min-h-[100px] resize-y focus:outline-none placeholder-gray-600"
+            spellCheck={false}
+          />
+        </div>
+      )}
+
       {/* SQL Editor */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
           <span className="text-gray-400 text-sm font-medium">
-            {syntaxMode === 'linq' ? 'LINQ Query (C#)' : 'SQL Query'}
+            {syntaxMode === 'linq' ? '② Verify with SQL (runs here)' : 'SQL Query'}
           </span>
           <span className="text-gray-500 text-xs">
-            {syntaxMode === 'linq' ? 'Write LINQ — use SQL to verify' : 'Ctrl+Enter to run'}
+            {syntaxMode === 'linq' ? 'Translate your LINQ to SQL — Ctrl+Enter to run' : 'Ctrl+Enter to run'}
           </span>
         </div>
         <textarea
@@ -348,10 +373,8 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={syntaxMode === 'linq' ? "Write your LINQ here, then verify with SQL below..." : "Write your SQL query here..."}
-          className={`w-full bg-gray-900 font-mono text-sm p-4 min-h-[120px] resize-y focus:outline-none placeholder-gray-600 ${
-            syntaxMode === 'linq' ? 'text-purple-300' : 'text-green-400'
-          }`}
+          placeholder="Write your SQL query here..."
+          className="w-full bg-gray-900 text-green-400 font-mono text-sm p-4 min-h-[120px] resize-y focus:outline-none placeholder-gray-600"
           spellCheck={false}
         />
         <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-t border-gray-700">
@@ -359,7 +382,7 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
             onClick={runQuery}
             className="flex items-center gap-1 px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
-            <Play size={14} /> Run Query
+            <Play size={14} /> Run SQL
           </button>
           {passed && (
             <span className="flex items-center gap-1 text-green-400 text-sm font-medium">

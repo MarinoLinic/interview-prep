@@ -5,8 +5,11 @@ import SqlSimulator from './components/SqlSimulator'
 import './App.css'
 
 function App() {
-  const [tab, setTab] = useState('flashcards')
-  const [syntaxMode, setSyntaxMode] = useState('sql') // 'sql' or 'linq'
+  const [tab, setTab] = useState(() => localStorage.getItem('app_tab') || 'flashcards')
+  const [syntaxMode, setSyntaxMode] = useState(() => localStorage.getItem('app_syntaxMode') || 'sql')
+
+  const handleSetTab = (t) => { setTab(t); localStorage.setItem('app_tab', t); }
+  const handleSetSyntaxMode = (m) => { setSyntaxMode(m); localStorage.setItem('app_syntaxMode', m); }
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -36,7 +39,7 @@ function App() {
           <div className="flex items-center gap-4">
             {/* SQL / LINQ toggle */}
             <button
-              onClick={() => setSyntaxMode(syntaxMode === 'sql' ? 'linq' : 'sql')}
+              onClick={() => handleSetSyntaxMode(syntaxMode === 'sql' ? 'linq' : 'sql')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
                 syntaxMode === 'linq'
                   ? 'bg-purple-900 border-purple-500 text-purple-200'
@@ -50,7 +53,7 @@ function App() {
             {/* Tab buttons */}
             <div className="flex gap-2">
               <button
-                onClick={() => setTab('flashcards')}
+                onClick={() => handleSetTab('flashcards')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   tab === 'flashcards'
                     ? 'bg-blue-600 text-white'
@@ -61,7 +64,7 @@ function App() {
                 Flashcards
               </button>
               <button
-                onClick={() => setTab('simulator')}
+                onClick={() => handleSetTab('simulator')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   tab === 'simulator'
                     ? 'bg-blue-600 text-white'
