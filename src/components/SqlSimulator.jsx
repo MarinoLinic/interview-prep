@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database } from 'lucide-react';
+import { Play, RotateCcw, ChevronLeft, ChevronRight, Lightbulb, CheckCircle, XCircle, Database, Sparkles } from 'lucide-react';
 import initSqlJs from 'sql.js';
 import challenges, { setupSQL } from '../data/challenges';
+import { convertLinqToSql } from '../utils/linqToSql';
 
 const categories = ['All', ...new Set(challenges.map(c => c.category))];
 
@@ -338,23 +339,36 @@ export default function SqlSimulator({ syntaxMode = 'sql' }) {
 
       {/* LINQ Scratchpad — only shown in LINQ mode */}
       {syntaxMode === 'linq' && (
-        <div className="bg-gray-900 border border-purple-800 rounded-xl overflow-hidden mb-4">
-          <div className="px-4 py-3 bg-purple-950 border-b border-purple-800">
+        <div className="bg-gray-900 border border-purple-800/60 rounded-xl overflow-hidden mb-4">
+          <div className="px-4 py-3 bg-purple-950/70 border-b border-purple-800/60">
             <div className="flex items-center justify-between">
-              <span className="text-purple-300 text-sm font-medium">① Write LINQ here (C# — practice only)</span>
-              <span className="text-purple-600 text-xs">cannot be executed</span>
+              <span className="text-purple-300 text-sm font-medium">① Write LINQ here (C#)</span>
+              <span className="text-purple-500 text-xs">practice only — not executed</span>
             </div>
-            <p className="text-purple-400 text-xs mt-1">
-              Write how you'd express this in LINQ. Then translate it to SQL in the box below and run that to check your logic.
+            <p className="text-purple-400/80 text-xs mt-1">
+              Write LINQ, then click "Convert to SQL" or translate manually below.
             </p>
           </div>
           <textarea
             value={linqDraft}
             onChange={(e) => setLinqDraft(e.target.value)}
-            placeholder="e.g. customers.Join(orders, c => c.Id, o => o.CustomerId, (c, o) => new { c.Name, o.Total });"
+            placeholder="e.g. customers.Join(orders, customer => customer.Id, order => order.CustomerId, (customer, order) => new { customer.Name, order.Total });"
             className="w-full bg-gray-900 text-purple-300 font-mono text-sm p-4 min-h-[100px] resize-y focus:outline-none placeholder-gray-600"
             spellCheck={false}
           />
+          <div className="px-4 py-2 bg-purple-950/40 border-t border-purple-800/40 flex items-center gap-3">
+            <button
+              onClick={() => {
+                const sql = convertLinqToSql(linqDraft);
+                if (sql) setQuery(sql);
+                else setQueryError('Could not convert — try translating manually. This converter only handles simple patterns.');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-700/60 hover:bg-purple-600/60 text-purple-200 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+            >
+              <Sparkles size={13} /> Convert to SQL
+            </button>
+            <span className="text-purple-600 text-xs">Approximate — may need manual fixes</span>
+          </div>
         </div>
       )}
 

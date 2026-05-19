@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, RotateCcw, Eye, EyeOff, Shuffle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, Eye, EyeOff, Shuffle, Copy, Check, BookOpen } from 'lucide-react';
 import flashcards from '../data/flashcards';
 
 const categories = ['All', ...new Set(flashcards.map(f => f.category))];
 
 const priorityConfig = {
-  core: { label: 'Core', description: 'WILL be asked', color: 'bg-red-600', border: 'border-red-500', count: flashcards.filter(f => f.priority === 'core').length },
-  important: { label: 'Important', description: 'Likely to come up', color: 'bg-yellow-600', border: 'border-yellow-500', count: flashcards.filter(f => f.priority === 'important').length },
-  extra: { label: 'Extra', description: 'Nice to know', color: 'bg-gray-600', border: 'border-gray-500', count: flashcards.filter(f => f.priority === 'extra').length },
+  core: { label: 'Core', description: 'WILL be asked', count: flashcards.filter(f => f.priority === 'core').length },
+  important: { label: 'Important', description: 'Likely to come up', count: flashcards.filter(f => f.priority === 'important').length },
+  extra: { label: 'Extra', description: 'Nice to know', count: flashcards.filter(f => f.priority === 'extra').length },
 };
 
 export default function Flashcards({ syntaxMode = 'sql' }) {
@@ -17,6 +17,14 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
   const [selectedPriority, setSelectedPriority] = useState(() => localStorage.getItem('fc_priority') || 'core');
   const [shuffled, setShuffled] = useState(false);
   const [shuffleOrder, setShuffleOrder] = useState([]);
+  const [copied, setCopied] = useState(false);
+  const [showReadMore, setShowReadMore] = useState(false);
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const filtered = useMemo(() => {
     let base = flashcards;
@@ -39,11 +47,13 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
 
   const handleNext = () => {
     setShowAnswer(false);
+    setShowReadMore(false);
     setCurrentIndex((prev) => (prev + 1) % filtered.length);
   };
 
   const handlePrev = () => {
     setShowAnswer(false);
+    setShowReadMore(false);
     setCurrentIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
   };
 
@@ -94,7 +104,7 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
             onClick={() => handlePriorityChange('core')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               selectedPriority === 'core'
-                ? 'bg-red-600 text-white ring-2 ring-red-400'
+                ? 'bg-amber-600 text-white ring-2 ring-amber-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
@@ -104,7 +114,7 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
             onClick={() => handlePriorityChange('important')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               selectedPriority === 'important'
-                ? 'bg-yellow-600 text-white ring-2 ring-yellow-400'
+                ? 'bg-sky-600 text-white ring-2 ring-sky-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
@@ -114,7 +124,7 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
             onClick={() => handlePriorityChange('all')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               selectedPriority === 'all'
-                ? 'bg-gray-500 text-white ring-2 ring-gray-400'
+                ? 'bg-gray-500 text-white ring-2 ring-gray-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
@@ -136,8 +146,8 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
             onClick={() => handleCategoryChange(cat)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-700/70 text-gray-300 hover:bg-gray-600'
             }`}
           >
             {cat}
@@ -155,9 +165,9 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
 
       {/* Card + controls — only when there are results */}
       {card && (() => {
-        const priorityBadge = card.priority === 'core' ? 'bg-red-900 text-red-300 border border-red-700'
-          : card.priority === 'important' ? 'bg-yellow-900 text-yellow-300 border border-yellow-700'
-          : 'bg-gray-700 text-gray-400 border border-gray-600';
+        const priorityBadge = card.priority === 'core' ? 'bg-amber-900/60 text-amber-300 border border-amber-700/50'
+          : card.priority === 'important' ? 'bg-sky-900/60 text-sky-300 border border-sky-700/50'
+          : 'bg-gray-700/60 text-gray-400 border border-gray-600/50';
 
         return (
           <>
@@ -179,7 +189,7 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
             {/* Card */}
             <div
               className={`bg-gray-800 rounded-xl p-8 min-h-[320px] flex flex-col cursor-pointer select-none border ${
-                card.priority === 'core' ? 'border-red-800' : card.priority === 'important' ? 'border-yellow-800' : 'border-gray-700'
+                card.priority === 'core' ? 'border-amber-800/50' : card.priority === 'important' ? 'border-sky-800/50' : 'border-gray-700'
               }`}
               onClick={() => setShowAnswer(!showAnswer)}
             >
@@ -189,25 +199,50 @@ export default function Flashcards({ syntaxMode = 'sql' }) {
                 const useLinq = syntaxMode === 'linq' && card.linqAnswer;
                 const answer = useLinq ? card.linqAnswer : card.answer;
                 const example = useLinq ? card.linqExample : card.example;
-                const codeColor = useLinq ? 'text-purple-300' : 'text-green-400';
-                const codeBorder = useLinq ? 'border-purple-800' : 'border-gray-600';
+                const codeColor = useLinq ? 'text-purple-300' : 'text-emerald-300';
+                const codeBg = useLinq ? 'bg-purple-950/50 border-purple-800/50' : 'bg-gray-900 border-gray-700';
                 return (
                   <div className="mt-4 flex-1 animate-fade-in">
                     {useLinq && (
-                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-purple-900 text-purple-300 border border-purple-700">
+                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
                         LINQ / C#
                       </span>
                     )}
                     {!useLinq && syntaxMode === 'linq' && !card.linqAnswer && (
-                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-gray-700 text-gray-400">
+                      <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-gray-700/60 text-gray-400">
                         No LINQ equivalent (theory)
                       </span>
                     )}
                     <p className="text-gray-200 mb-4 leading-relaxed">{answer}</p>
                     {example && (
-                      <pre className={`bg-gray-900 border ${codeBorder} rounded-lg p-4 text-sm ${codeColor} overflow-x-auto whitespace-pre-wrap`}>
-                        <code>{example}</code>
-                      </pre>
+                      <div className="relative group">
+                        <pre className={`border rounded-lg p-4 pr-12 text-sm ${codeColor} ${codeBg} overflow-x-auto whitespace-pre-wrap`}>
+                          <code>{example}</code>
+                        </pre>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCopy(example); }}
+                          className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-700/80 hover:bg-gray-600 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Copy code"
+                        >
+                          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                    )}
+                    {card.readMore && (
+                      <div className="mt-4">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowReadMore(!showReadMore); }}
+                          className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                        >
+                          <BookOpen size={14} />
+                          {showReadMore ? 'Hide explanation' : 'Explain like I\'m a beginner'}
+                        </button>
+                        {showReadMore && (
+                          <div className="mt-3 p-4 bg-blue-950/30 border border-blue-900/40 rounded-lg text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                            {card.readMore}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 );

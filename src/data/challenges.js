@@ -133,7 +133,11 @@ GROUP BY customers.id;`,
     description: "Get customer name, product name, and quantity for all order items. (Join customers → orders → order_items → products)",
     hint: "Chain INNER JOINs: customers → orders (on customer_id) → order_items (on order_id) → products (on product_id)",
     linqHint: "Chain .Join() calls or use query syntax: from c in customers join o ... join oi ... join p ...",
-    expectedQuery: `SELECT c.name, p.name AS product, oi.quantity FROM customers c INNER JOIN orders o ON c.id = o.customer_id INNER JOIN order_items oi ON o.id = oi.order_id INNER JOIN products p ON oi.product_id = p.id;`,
+    expectedQuery: `SELECT customers.name, products.name AS product, order_items.quantity
+FROM customers
+INNER JOIN orders ON customers.id = orders.customer_id
+INNER JOIN order_items ON orders.id = order_items.order_id
+INNER JOIN products ON order_items.product_id = products.id;`,
     linqExpectedQuery: `from c in customers\njoin o in orders on c.Id equals o.CustomerId\njoin oi in orderItems on o.Id equals oi.OrderId\njoin p in products on oi.ProductId equals p.Id\nselect new { c.Name, Product = p.Name, oi.Quantity };`,
     validateResult: (rows) => rows.length === 7 && rows[0].name !== undefined && rows[0].product !== undefined,
   },
@@ -287,7 +291,12 @@ GROUP BY customers.id;`,
     description: "Get the top 2 customers by total spending. Show their name and total_spent, ordered highest first.",
     hint: "JOIN customers with orders, GROUP BY, ORDER BY DESC, LIMIT 2",
     linqHint: "GroupJoin or nav properties → .Select() with .Sum() → .OrderByDescending() → .Take(2)",
-    expectedQuery: `SELECT c.name, SUM(o.total) AS total_spent FROM customers c INNER JOIN orders o ON c.id = o.customer_id GROUP BY c.id ORDER BY total_spent DESC LIMIT 2;`,
+    expectedQuery: `SELECT customers.name, SUM(orders.total) AS total_spent
+FROM customers
+INNER JOIN orders ON customers.id = orders.customer_id
+GROUP BY customers.id
+ORDER BY total_spent DESC
+LIMIT 2;`,
     linqExpectedQuery: `customers.GroupJoin(orders,\n    c => c.Id, o => o.CustomerId,\n    (c, ords) => new {\n        c.Name,\n        TotalSpent = ords.Sum(o => o.Total)\n    })\n    .Where(x => x.TotalSpent > 0)\n    .OrderByDescending(x => x.TotalSpent)\n    .Take(2);`,
     validateResult: (rows) => rows.length === 2 && rows[0].total_spent >= rows[1].total_spent,
   },
@@ -299,7 +308,11 @@ GROUP BY customers.id;`,
     description: "Get names of customers who have at least one pending order, along with their total pending amount.",
     hint: "JOIN + WHERE status = 'pending' + GROUP BY",
     linqHint: "Filter orders first with .Where(status == pending), then join/group with customers",
-    expectedQuery: `SELECT c.name, SUM(o.total) AS pending_total FROM customers c INNER JOIN orders o ON c.id = o.customer_id WHERE o.status = 'pending' GROUP BY c.id;`,
+    expectedQuery: `SELECT customers.name, SUM(orders.total) AS pending_total
+FROM customers
+INNER JOIN orders ON customers.id = orders.customer_id
+WHERE orders.status = 'pending'
+GROUP BY customers.id;`,
     linqExpectedQuery: `customers.GroupJoin(\n    orders.Where(o => o.Status == "pending"),\n    c => c.Id, o => o.CustomerId,\n    (c, ords) => new {\n        c.Name,\n        PendingTotal = ords.Sum(o => o.Total)\n    })\n    .Where(x => x.PendingTotal > 0);`,
     validateResult: (rows) => rows.length === 2,
   },
@@ -311,7 +324,13 @@ GROUP BY customers.id;`,
     description: "Get customer_id and total_spent for completed orders only, grouped by customer, where total_spent > 200, ordered by total_spent descending, limited to 3 results.",
     hint: "Use the full clause order: SELECT → FROM → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT",
     linqHint: ".Where() → .GroupBy() → .Select() → .Where() (HAVING) → .OrderByDescending() → .Take(3)",
-    expectedQuery: `SELECT customer_id, SUM(total) AS total_spent FROM orders WHERE status = 'completed' GROUP BY customer_id HAVING SUM(total) > 200 ORDER BY total_spent DESC LIMIT 3;`,
+    expectedQuery: `SELECT customer_id, SUM(total) AS total_spent
+FROM orders
+WHERE status = 'completed'
+GROUP BY customer_id
+HAVING SUM(total) > 200
+ORDER BY total_spent DESC
+LIMIT 3;`,
     linqExpectedQuery: `orders\n    .Where(o => o.Status == "completed")\n    .GroupBy(o => o.CustomerId)\n    .Select(g => new {\n        CustomerId = g.Key,\n        TotalSpent = g.Sum(o => o.Total)\n    })\n    .Where(x => x.TotalSpent > 200)\n    .OrderByDescending(x => x.TotalSpent)\n    .Take(3);`,
     validateResult: (rows) => rows.length === 3 && rows[0].total_spent >= rows[1].total_spent,
   },
