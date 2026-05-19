@@ -10,7 +10,7 @@ const priorityConfig = {
   extra: { label: 'Extra', description: 'Nice to know', color: 'bg-gray-600', border: 'border-gray-500', count: flashcards.filter(f => f.priority === 'extra').length },
 };
 
-export default function Flashcards() {
+export default function Flashcards({ syntaxMode = 'sql' }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -175,16 +175,34 @@ export default function Flashcards() {
         <h3 className="text-xl font-semibold text-white mb-4">{card.question}</h3>
 
         {/* Answer */}
-        {showAnswer && (
-          <div className="mt-4 flex-1 animate-fade-in">
-            <p className="text-gray-200 mb-4 leading-relaxed">{card.answer}</p>
-            {card.example && (
-              <pre className="bg-gray-900 border border-gray-600 rounded-lg p-4 text-sm text-green-400 overflow-x-auto whitespace-pre-wrap">
-                <code>{card.example}</code>
-              </pre>
-            )}
-          </div>
-        )}
+        {showAnswer && (() => {
+          const useLinq = syntaxMode === 'linq' && card.linqAnswer;
+          const answer = useLinq ? card.linqAnswer : card.answer;
+          const example = useLinq ? card.linqExample : card.example;
+          const codeColor = useLinq ? 'text-purple-300' : 'text-green-400';
+          const codeBorder = useLinq ? 'border-purple-800' : 'border-gray-600';
+
+          return (
+            <div className="mt-4 flex-1 animate-fade-in">
+              {useLinq && (
+                <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-purple-900 text-purple-300 border border-purple-700">
+                  LINQ / C#
+                </span>
+              )}
+              {!useLinq && syntaxMode === 'linq' && !card.linqAnswer && (
+                <span className="inline-block text-xs px-2 py-0.5 mb-3 rounded bg-gray-700 text-gray-400">
+                  No LINQ equivalent (theory)
+                </span>
+              )}
+              <p className="text-gray-200 mb-4 leading-relaxed">{answer}</p>
+              {example && (
+                <pre className={`bg-gray-900 border ${codeBorder} rounded-lg p-4 text-sm ${codeColor} overflow-x-auto whitespace-pre-wrap`}>
+                  <code>{example}</code>
+                </pre>
+              )}
+            </div>
+          );
+        })()}
 
         {!showAnswer && (
           <div className="flex-1 flex items-center justify-center">

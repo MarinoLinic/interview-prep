@@ -2,6 +2,9 @@
 // "core"      — Your friend said these WILL be asked. Study these first.
 // "important" — Very likely to come up, know these well.
 // "extra"     — Good to know, but don't stress if short on time.
+//
+// Cards with linqAnswer/linqExample will show LINQ version when toggled.
+// Cards without (pure theory like normalization) stay the same in both modes.
 const flashcards = [
   // === JOINS (highest priority) ===
   {
@@ -13,6 +16,19 @@ const flashcards = [
     example: `SELECT c.name, o.total
 FROM customers c
 INNER JOIN orders o ON c.id = o.customer_id;`,
+    linqAnswer: "Use .Join() to match two collections on a key. Only items with matches in both collections are returned. In EF Core, navigation properties + .Include() often replace manual joins.",
+    linqExample: `// Method syntax — explicit Join
+var result = customers.Join(
+    orders,
+    c => c.Id,            // outer key
+    o => o.CustomerId,    // inner key
+    (c, o) => new { c.Name, o.Total }  // result selector
+);
+
+// EF Core with navigation properties (preferred)
+var result = _context.Orders
+    .Include(o => o.Customer)
+    .Select(o => new { o.Customer.Name, o.Total });`,
   },
   {
     id: 2,
@@ -24,6 +40,21 @@ INNER JOIN orders o ON c.id = o.customer_id;`,
 FROM customers c
 LEFT JOIN orders o ON c.id = o.customer_id;
 -- Ivan appears with NULL total (no orders)`,
+    linqAnswer: "Use .GroupJoin() + .SelectMany() with .DefaultIfEmpty(). This keeps all left items, filling nulls where no match exists. EF Core handles this with navigation properties.",
+    linqExample: `// LINQ left join pattern
+var result = customers.GroupJoin(
+    orders,
+    c => c.Id,
+    o => o.CustomerId,
+    (c, orderGroup) => new { c, orderGroup }
+).SelectMany(
+    x => x.orderGroup.DefaultIfEmpty(),
+    (x, o) => new { x.c.Name, Total = o?.Total }
+);
+
+// EF Core (simpler — navigation properties)
+var result = _context.Customers
+    .Select(c => new { c.Name, Total = c.Orders.Sum(o => o.Total) });`,
   },
   {
     id: 3,
@@ -34,6 +65,17 @@ LEFT JOIN orders o ON c.id = o.customer_id;
     example: `SELECT c.name, o.total
 FROM customers c
 RIGHT JOIN orders o ON c.id = o.customer_id;`,
+    linqAnswer: "No direct .RightJoin() in LINQ. Just swap the collections and use the LEFT JOIN pattern (GroupJoin + DefaultIfEmpty), or start from the right table.",
+    linqExample: `// Just flip — start from orders, join to customers
+var result = orders.GroupJoin(
+    customers,
+    o => o.CustomerId,
+    c => c.Id,
+    (o, custGroup) => new { o, custGroup }
+).SelectMany(
+    x => x.custGroup.DefaultIfEmpty(),
+    (x, c) => new { Name = c?.Name, x.o.Total }
+);`,
   },
   {
     id: 4,
@@ -44,6 +86,20 @@ RIGHT JOIN orders o ON c.id = o.customer_id;`,
     example: `SELECT c.name, o.total
 FROM customers c
 LEFT JOIN orders o ON c.id = o.customer_id;`,
+    linqAnswer: "LINQ Join pattern: collection1.Join(collection2, outerKey, innerKey, resultSelector). For LEFT JOIN: .GroupJoin() + .SelectMany() + .DefaultIfEmpty().",
+    linqExample: `// INNER JOIN formula
+collection1.Join(collection2,
+    item1 => item1.Key,       // outer key selector
+    item2 => item2.ForeignKey, // inner key selector
+    (item1, item2) => new { } // result selector
+);
+
+// LEFT JOIN formula
+collection1.GroupJoin(collection2,
+    item1 => item1.Key, item2 => item2.ForeignKey,
+    (item1, group) => new { item1, group }
+).SelectMany(x => x.group.DefaultIfEmpty(),
+    (x, item2) => new { });`,
   },
   {
     id: 5,
@@ -55,6 +111,12 @@ LEFT JOIN orders o ON c.id = o.customer_id;`,
 FROM customers c
 CROSS JOIN orders o;
 -- 4 customers × 5 orders = 20 rows`,
+    linqAnswer: "Use .SelectMany() without a join condition — every item paired with every other item.",
+    linqExample: `var result = customers.SelectMany(
+    c => orders,
+    (c, o) => new { c.Name, o.Total }
+);
+// 4 customers × 5 orders = 20 results`,
   },
   {
     id: 6,
@@ -66,6 +128,22 @@ CROSS JOIN orders o;
 FROM customers c
 LEFT JOIN orders o ON c.id = o.customer_id
 GROUP BY c.id;`,
+    linqAnswer: "Use navigation properties with .Select() projecting aggregates, or GroupJoin + aggregate methods.",
+    linqExample: `// EF Core with navigation properties
+var result = _context.Customers.Select(c => new {
+    c.Name,
+    OrderCount = c.Orders.Count(),
+    TotalSpent = c.Orders.Sum(o => o.Total)
+});
+
+// Pure LINQ
+var result = customers.GroupJoin(orders,
+    c => c.Id, o => o.CustomerId,
+    (c, ords) => new {
+        c.Name,
+        OrderCount = ords.Count(),
+        TotalSpent = ords.Sum(o => o.Total)
+    });`,
   },
 
   // === WHERE clause ===
@@ -77,6 +155,16 @@ GROUP BY c.id;`,
     answer: "WHERE filters individual rows before any grouping. Operators: = , != , > , < , >= , <= , AND, OR, NOT, LIKE, BETWEEN, IN, IS NULL, IS NOT NULL.",
     example: `SELECT * FROM orders
 WHERE status = 'completed' AND total > 100;`,
+    linqAnswer: ".Where() filters a collection with a lambda predicate. Use && for AND, || for OR, ! for NOT. Chain multiple .Where() calls or combine in one.",
+    linqExample: `var result = orders
+    .Where(o => o.Status == "completed" && o.Total > 100)
+    .ToList();
+
+// Multiple conditions
+var result = customers
+    .Where(c => c.City == "Zagreb" || c.City == "Split")
+    .Where(c => c.Email != null)
+    .ToList();`,
   },
   {
     id: 8,
@@ -89,6 +177,15 @@ SELECT customer_id, SUM(total) FROM orders
 WHERE status = 'completed'
 GROUP BY customer_id
 HAVING SUM(total) > 500;`,
+    linqAnswer: "In LINQ: .Where() before .GroupBy() = SQL WHERE. .Where() after .GroupBy() = SQL HAVING. The position of the filter determines which it is.",
+    linqExample: `var result = orders
+    .Where(o => o.Status == "completed")   // WHERE (before grouping)
+    .GroupBy(o => o.CustomerId)
+    .Select(g => new {
+        CustomerId = g.Key,
+        TotalSpent = g.Sum(o => o.Total)
+    })
+    .Where(x => x.TotalSpent > 500);      // HAVING (after grouping)`,
   },
   {
     id: 9,
@@ -99,6 +196,17 @@ HAVING SUM(total) > 500;`,
     example: `SELECT * FROM customers WHERE name LIKE 'M%';    -- starts with M
 SELECT * FROM customers WHERE name LIKE '%rin%'; -- contains 'rin'
 SELECT * FROM customers WHERE email LIKE '%@email.com';`,
+    linqAnswer: "Use .StartsWith(), .EndsWith(), .Contains() string methods inside .Where(). EF Core translates these to SQL LIKE automatically.",
+    linqExample: `// starts with M
+customers.Where(c => c.Name.StartsWith("M"));
+
+// contains 'rin'
+customers.Where(c => c.Name.Contains("rin"));
+
+// ends with @email.com
+customers.Where(c => c.Email.EndsWith("@email.com"));
+
+// EF Core: .Contains() → LIKE '%rin%'`,
   },
 
   // === BETWEEN ===
@@ -112,6 +220,15 @@ SELECT * FROM customers WHERE email LIKE '%@email.com';`,
 -- Same as: WHERE total >= 100 AND total <= 500
 
 SELECT * FROM customers WHERE name BETWEEN 'A' AND 'M';`,
+    linqAnswer: "No .Between() method in LINQ. Use >= and <= in the .Where() predicate — same logic, explicit operators.",
+    linqExample: `// BETWEEN 100 AND 500
+var result = orders
+    .Where(o => o.Total >= 100 && o.Total <= 500);
+
+// Text range
+var result = customers
+    .Where(c => string.Compare(c.Name, "A") >= 0
+             && string.Compare(c.Name, "M") <= 0);`,
   },
   {
     id: 11,
@@ -121,6 +238,9 @@ SELECT * FROM customers WHERE name BETWEEN 'A' AND 'M';`,
     answer: "Returns rows OUTSIDE the specified range (exclusive of both endpoints).",
     example: `SELECT * FROM orders WHERE total NOT BETWEEN 100 AND 500;
 -- Returns orders with total < 100 OR total > 500`,
+    linqAnswer: "Negate the range check: < lower OR > upper.",
+    linqExample: `var result = orders
+    .Where(o => o.Total < 100 || o.Total > 500);`,
   },
 
   // === Aliases ===
@@ -139,6 +259,17 @@ GROUP BY c.id;
 -- Table alias (shortens query)
 SELECT c.name, o.total FROM customers AS c
 LEFT JOIN orders AS o ON c.id = o.customer_id;`,
+    linqAnswer: "In LINQ, anonymous object property names act as aliases. Name them whatever you want in the new { } projection. Lambda parameter names (c, o) are like table aliases.",
+    linqExample: `// Property names = column aliases
+var result = customers.Select(c => new {
+    CustomerName = c.Name,     // AS customer_name
+    TotalSpent = c.Orders.Sum(o => o.Total)  // AS total_spent
+});
+
+// Lambda params = table aliases
+// 'c' for customer, 'o' for order — same as SQL aliases
+orders.Where(o => o.Total > 100)
+      .Select(o => new { o.CustomerId, o.Total });`,
   },
 
   // === Foreign Keys ===
@@ -154,6 +285,20 @@ LEFT JOIN orders AS o ON c.id = o.customer_id;`,
     total DECIMAL(10,2),
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );`,
+    linqAnswer: "In EF Core, foreign keys are represented by a FK property (CustomerId) + a navigation property (Customer). EF Core enforces relationships and generates the FK constraint in migrations.",
+    linqExample: `public class Order
+{
+    public int Id { get; set; }
+    public decimal Total { get; set; }
+    public int CustomerId { get; set; }        // FK property
+    public Customer Customer { get; set; }      // Navigation property
+}
+
+// EF Core Fluent API (in OnModelCreating)
+modelBuilder.Entity<Order>()
+    .HasOne(o => o.Customer)
+    .WithMany(c => c.Orders)
+    .HasForeignKey(o => o.CustomerId);`,
   },
   {
     id: 14,
@@ -165,6 +310,11 @@ LEFT JOIN orders AS o ON c.id = o.customer_id;`,
 INSERT INTO orders (customer_id, total, status)
 VALUES (99, 500.00, 'completed');
 -- Error: FOREIGN KEY constraint failed`,
+    linqAnswer: "EF Core throws a DbUpdateException if you try to save an entity with a FK pointing to a non-existent record. The database still enforces this at the DB level too.",
+    linqExample: `// This throws DbUpdateException — customer 99 doesn't exist
+var order = new Order { CustomerId = 99, Total = 500 };
+_context.Orders.Add(order);
+await _context.SaveChangesAsync(); // EXCEPTION!`,
   },
 
   // === Composite Keys ===
@@ -182,6 +332,18 @@ VALUES (99, 500.00, 'completed');
     PRIMARY KEY (student_id, course_id, semester)
 );
 -- Same student can take same course in different semesters`,
+    linqAnswer: "In EF Core, configure composite keys with .HasKey() in Fluent API using an anonymous object. Can't use [Key] attribute for composite keys.",
+    linqExample: `public class Enrollment
+{
+    public int StudentId { get; set; }
+    public int CourseId { get; set; }
+    public string Semester { get; set; }
+    public string Grade { get; set; }
+}
+
+// In DbContext OnModelCreating:
+modelBuilder.Entity<Enrollment>()
+    .HasKey(e => new { e.StudentId, e.CourseId, e.Semester });`,
   },
   {
     id: 16,
@@ -194,7 +356,7 @@ INSERT INTO enrollments VALUES (1, 101, 'Fall2024', 'B');
 -- (1, 101, 'Fall2024') already exists → UNIQUE constraint violated`,
   },
 
-  // === Normalization ===
+  // === Normalization (theory — no LINQ equivalent) ===
   {
     id: 17,
     priority: "core",
@@ -260,6 +422,15 @@ CREATE TABLE customers (customer_id INTEGER PRIMARY KEY, name TEXT,
 SELECT SUM(total) FROM orders;          -- 1879
 SELECT AVG(total) FROM orders;          -- 375.8
 SELECT MIN(total), MAX(total) FROM orders; -- 80, 999`,
+    linqAnswer: "LINQ has .Count(), .Sum(), .Average(), .Min(), .Max() — same 5 aggregate operations, called as extension methods on collections.",
+    linqExample: `int count = orders.Count();                   // 5
+decimal sum = orders.Sum(o => o.Total);        // 1879
+decimal avg = orders.Average(o => o.Total);    // 375.8
+decimal min = orders.Min(o => o.Total);        // 80
+decimal max = orders.Max(o => o.Total);        // 999
+
+// With filter (like COUNT with WHERE)
+int completed = orders.Count(o => o.Status == "completed"); // 4`,
   },
   {
     id: 22,
@@ -273,6 +444,18 @@ GROUP BY customer_id;
 -- customer 1: 2 orders, 350 total
 -- customer 2: 2 orders, 530 total
 -- customer 3: 1 order, 999 total`,
+    linqAnswer: ".GroupBy() groups a collection by a key. Each group has a .Key property and is itself a collection you can aggregate with .Count(), .Sum(), etc.",
+    linqExample: `var result = orders
+    .GroupBy(o => o.CustomerId)
+    .Select(g => new {
+        CustomerId = g.Key,
+        OrderCount = g.Count(),
+        TotalSpent = g.Sum(o => o.Total)
+    })
+    .ToList();
+// { CustomerId: 1, OrderCount: 2, TotalSpent: 350 }
+// { CustomerId: 2, OrderCount: 2, TotalSpent: 530 }
+// { CustomerId: 3, OrderCount: 1, TotalSpent: 999 }`,
   },
   {
     id: 23,
@@ -287,6 +470,17 @@ GROUP BY customer_id
 HAVING SUM(total) > 500
 ORDER BY total_spent DESC
 LIMIT 5;`,
+    linqAnswer: "In LINQ you chain methods in logical order: source → .Where() → .GroupBy() → .Select() → .Where() (HAVING) → .OrderBy() → .Take(). Order is flexible but this mirrors SQL logic.",
+    linqExample: `var result = orders                              // FROM orders
+    .Where(o => o.Status == "completed")          // WHERE
+    .GroupBy(o => o.CustomerId)                    // GROUP BY
+    .Select(g => new {                            // SELECT
+        CustomerId = g.Key,
+        TotalSpent = g.Sum(o => o.Total)
+    })
+    .Where(x => x.TotalSpent > 500)              // HAVING
+    .OrderByDescending(x => x.TotalSpent)        // ORDER BY DESC
+    .Take(5);                                     // LIMIT 5`,
   },
 
   // === ORDER BY, DISTINCT, LIMIT ===
@@ -299,6 +493,16 @@ LIMIT 5;`,
     example: `SELECT DISTINCT city FROM customers;  -- unique cities only
 SELECT * FROM orders ORDER BY total DESC LIMIT 3;  -- top 3 orders
 SELECT * FROM orders ORDER BY total DESC LIMIT 10 OFFSET 10; -- page 2`,
+    linqAnswer: ".OrderBy() / .OrderByDescending() for sorting. .Distinct() for unique values. .Take(n) for LIMIT. .Skip(n) for OFFSET.",
+    linqExample: `// DISTINCT
+var cities = customers.Select(c => c.City).Distinct();
+
+// ORDER BY DESC + LIMIT 3
+var top3 = orders.OrderByDescending(o => o.Total).Take(3);
+
+// Pagination: page 2 (skip 10, take 10)
+var page2 = orders.OrderByDescending(o => o.Total)
+    .Skip(10).Take(10);`,
   },
 
   // === CREATE TABLE & PRIMARY KEY ===
@@ -315,6 +519,15 @@ SELECT * FROM orders ORDER BY total DESC LIMIT 10 OFFSET 10; -- page 2`,
     city TEXT
 );
 -- NOT NULL = mandatory field, can't be blank`,
+    linqAnswer: "In EF Core, a property named 'Id' or '[ClassName]Id' is automatically the PK. The DB auto-generates it. Use [Required] or .IsRequired() for NOT NULL.",
+    linqExample: `public class Customer
+{
+    public int Id { get; set; }             // PK, auto-increment by convention
+    [Required]
+    public string Name { get; set; }        // NOT NULL
+    public string? Email { get; set; }      // nullable
+    public string? City { get; set; }       // nullable
+}`,
   },
 
   // === INSERT ===
@@ -328,6 +541,19 @@ SELECT * FROM orders ORDER BY total DESC LIMIT 10 OFFSET 10; -- page 2`,
 ('Marino', 'marino@email.com', 'Zagreb'),
 ('Ana', 'ana@email.com', 'Split'),
 ('Ivan', 'ivan@email.com', 'Zagreb');`,
+    linqAnswer: "In EF Core: create object, .Add() to DbSet, .SaveChangesAsync(). Id is auto-assigned. Skip properties → they default to null.",
+    linqExample: `var customer = new Customer {
+    Name = "Marino",
+    Email = "marino@email.com",
+    City = "Zagreb"
+};
+_context.Customers.Add(customer);
+await _context.SaveChangesAsync();
+// customer.Id is now auto-assigned (e.g., 1)
+
+// Add multiple
+_context.Customers.AddRange(customer1, customer2, customer3);
+await _context.SaveChangesAsync();`,
   },
 
   // === Subqueries ===
@@ -344,6 +570,18 @@ WHERE id IN (SELECT DISTINCT customer_id FROM orders);
 -- Find orders above average total
 SELECT * FROM orders
 WHERE total > (SELECT AVG(total) FROM orders);`,
+    linqAnswer: "In LINQ, subqueries are just nested expressions or variables. Use .Any()/.Contains() for IN/EXISTS, or compute a value and use it in .Where().",
+    linqExample: `// IN subquery → .Contains() or .Any()
+var customerIds = orders.Select(o => o.CustomerId).Distinct();
+var result = customers.Where(c => customerIds.Contains(c.Id));
+
+// Or with .Any() (like EXISTS — often faster)
+var result = customers
+    .Where(c => orders.Any(o => o.CustomerId == c.Id));
+
+// Subquery for comparison
+var avgTotal = orders.Average(o => o.Total);
+var aboveAvg = orders.Where(o => o.Total > avgTotal);`,
   },
 
   // === NULL handling ===
@@ -356,6 +594,14 @@ WHERE total > (SELECT AVG(total) FROM orders);`,
     example: `SELECT * FROM customers WHERE phone IS NULL;
 SELECT * FROM customers WHERE phone IS NOT NULL;
 -- WRONG: WHERE phone = NULL  ← always returns no rows!`,
+    linqAnswer: "In C#, just use == null or != null. C# handles null comparison correctly (unlike SQL where = NULL fails).",
+    linqExample: `// IS NULL
+var noPhone = customers.Where(c => c.Phone == null);
+
+// IS NOT NULL
+var hasPhone = customers.Where(c => c.Phone != null);
+
+// C# handles this correctly — no weird SQL gotchas here`,
   },
 ];
 
