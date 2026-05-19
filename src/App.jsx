@@ -79,7 +79,7 @@ function App() {
       {/* Content */}
       <main className="py-8">
         {tab === 'flashcards' && <Flashcards syntaxMode={syntaxMode} />}
-        {tab === 'simulator' && <SqlSimulator />}
+        {tab === 'simulator' && <SqlSimulator syntaxMode={syntaxMode} />}
       </main>
     </div>
   )

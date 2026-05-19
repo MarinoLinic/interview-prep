@@ -5,7 +5,7 @@ import challenges, { setupSQL } from '../data/challenges';
 
 const categories = ['All', ...new Set(challenges.map(c => c.category))];
 
-export default function SqlSimulator() {
+export default function SqlSimulator({ syntaxMode = 'sql' }) {
   const [db, setDb] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -210,6 +210,11 @@ export default function SqlSimulator() {
                     {challenge.difficulty}
                   </span>
                   <span className="text-xs text-gray-500">{challenge.category}</span>
+                  {syntaxMode === 'linq' && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-900 text-purple-300 border border-purple-700">
+                      LINQ mode
+                    </span>
+                  )}
                   {completedChallenges.has(challenge.id) && (
                     <CheckCircle size={16} className="text-green-400" />
                   )}
@@ -239,14 +244,45 @@ export default function SqlSimulator() {
 
               {showHint && (
                 <p className="mt-3 text-yellow-300 text-sm bg-yellow-950 border border-yellow-800 rounded-lg p-3">
-                  {challenge.hint}
+                  {syntaxMode === 'linq' && challenge.linqHint ? challenge.linqHint : challenge.hint}
                 </p>
               )}
               {showSolution && (
-                <pre className="mt-3 text-orange-300 text-sm bg-orange-950 border border-orange-800 rounded-lg p-3 overflow-x-auto">
-                  <code>{challenge.expectedQuery}</code>
+                <pre className={`mt-3 text-sm rounded-lg p-3 overflow-x-auto whitespace-pre-wrap ${
+                  syntaxMode === 'linq' ? 'text-purple-300 bg-purple-950 border border-purple-800' : 'text-orange-300 bg-orange-950 border border-orange-800'
+                }`}>
+                  <code>{syntaxMode === 'linq' && challenge.linqExpectedQuery ? challenge.linqExpectedQuery : challenge.expectedQuery}</code>
                 </pre>
               )}
+
+              {/* Schema reference (collapsible) */}
+              <details className="mt-4">
+                <summary className="text-gray-400 text-xs cursor-pointer hover:text-gray-300 select-none">
+                  Available tables & columns
+                </summary>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-300 mt-2">
+                  <div className="bg-gray-900 rounded-lg p-2">
+                    <span className="text-blue-400 font-medium text-xs">customers</span>
+                    <p className="text-gray-500 text-xs">id, name, email, city</p>
+                  </div>
+                  <div className="bg-gray-900 rounded-lg p-2">
+                    <span className="text-blue-400 font-medium text-xs">orders</span>
+                    <p className="text-gray-500 text-xs">id, customer_id (FK), total, status</p>
+                  </div>
+                  <div className="bg-gray-900 rounded-lg p-2">
+                    <span className="text-blue-400 font-medium text-xs">products</span>
+                    <p className="text-gray-500 text-xs">id, name, price, category</p>
+                  </div>
+                  <div className="bg-gray-900 rounded-lg p-2">
+                    <span className="text-blue-400 font-medium text-xs">order_items</span>
+                    <p className="text-gray-500 text-xs">order_id, product_id (PK), quantity</p>
+                  </div>
+                  <div className="bg-gray-900 rounded-lg p-2">
+                    <span className="text-blue-400 font-medium text-xs">enrollments</span>
+                    <p className="text-gray-500 text-xs">student_id, course_id, semester (PK), grade</p>
+                  </div>
+                </div>
+              </details>
 
               {/* Navigation */}
               <div className="flex justify-between mt-4">
@@ -300,16 +336,22 @@ export default function SqlSimulator() {
       {/* SQL Editor */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-          <span className="text-gray-400 text-sm font-medium">SQL Query</span>
-          <span className="text-gray-500 text-xs">Ctrl+Enter to run</span>
+          <span className="text-gray-400 text-sm font-medium">
+            {syntaxMode === 'linq' ? 'LINQ Query (C#)' : 'SQL Query'}
+          </span>
+          <span className="text-gray-500 text-xs">
+            {syntaxMode === 'linq' ? 'Write LINQ — use SQL to verify' : 'Ctrl+Enter to run'}
+          </span>
         </div>
         <textarea
           ref={textareaRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Write your SQL query here..."
-          className="w-full bg-gray-900 text-green-400 font-mono text-sm p-4 min-h-[120px] resize-y focus:outline-none placeholder-gray-600"
+          placeholder={syntaxMode === 'linq' ? "Write your LINQ here, then verify with SQL below..." : "Write your SQL query here..."}
+          className={`w-full bg-gray-900 font-mono text-sm p-4 min-h-[120px] resize-y focus:outline-none placeholder-gray-600 ${
+            syntaxMode === 'linq' ? 'text-purple-300' : 'text-green-400'
+          }`}
           spellCheck={false}
         />
         <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-t border-gray-700">
