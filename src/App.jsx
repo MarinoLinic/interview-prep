@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Terminal, ToggleLeft, ToggleRight, Database, Code2, Globe, HelpCircle, GraduationCap } from 'lucide-react'
+import { BookOpen, Terminal, ToggleLeft, ToggleRight, Database, Code2, Globe, HelpCircle, GraduationCap, Braces } from 'lucide-react'
 import Flashcards from './components/Flashcards'
 import SqlSimulator from './components/SqlSimulator'
 import sqlFlashcards from './data/flashcards'
@@ -7,6 +7,7 @@ import csharpFlashcards from './data/csharpFlashcards'
 import dotnetFlashcards from './data/dotnetFlashcards'
 import generalFlashcards from './data/generalFlashcards'
 import revisionFlashcards from './data/revisionFlashcards'
+import pythonFlashcards from './data/pythonFlashcards'
 import './App.css'
 
 const tabs = [
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'dotnet',    label: '.NET',            icon: Globe,      isFlashcard: true },
   { id: 'general',   label: 'Interview',       icon: HelpCircle, isFlashcard: true },
   { id: 'revision',  label: 'Revision',        icon: GraduationCap, isFlashcard: true },
+  { id: 'python',    label: 'Python',          icon: Braces,        isFlashcard: true },
 ]
 
 function App() {
@@ -103,6 +105,7 @@ function App() {
         {tab === 'dotnet' && <Flashcards data={dotnetFlashcards} storagePrefix="fc_net" />}
         {tab === 'general' && <Flashcards data={generalFlashcards} storagePrefix="fc_gen" />}
         {tab === 'revision' && <Flashcards data={revisionFlashcards} storagePrefix="fc_rev" />}
+        {tab === 'python' && <Flashcards data={pythonFlashcards} storagePrefix="fc_py" />}
       </main>
     </div>
   )

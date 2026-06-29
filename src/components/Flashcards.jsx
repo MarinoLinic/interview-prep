@@ -13,7 +13,19 @@ export default function Flashcards({ data = [], syntaxMode = 'sql', storagePrefi
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(() => localStorage.getItem(`${storagePrefix}_category`) || 'All');
-  const [selectedPriority, setSelectedPriority] = useState(() => localStorage.getItem(`${storagePrefix}_priority`) || 'core');
+  const [selectedPriorities, setSelectedPriorities] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`${storagePrefix}_priority`);
+      if (!stored) return ['core'];
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed === 'important') return ['core', 'important'];
+      if (parsed === 'all') return ['core', 'important', 'extra'];
+      return ['core'];
+    } catch {
+      return ['core'];
+    }
+  });
   const [shuffled, setShuffled] = useState(false);
   const [shuffleOrder, setShuffleOrder] = useState([]);
   const [copied, setCopied] = useState(false);
@@ -30,17 +42,12 @@ export default function Flashcards({ data = [], syntaxMode = 'sql', storagePrefi
     if (selectedCategory !== 'All') {
       base = base.filter(f => f.category === selectedCategory);
     }
-    if (selectedPriority !== 'all') {
-      const levels = selectedPriority === 'core' ? ['core']
-        : selectedPriority === 'important' ? ['core', 'important']
-        : ['core', 'important', 'extra'];
-      base = base.filter(f => levels.includes(f.priority));
-    }
+    base = base.filter(f => selectedPriorities.includes(f.priority));
     if (shuffled && shuffleOrder.length > 0) {
       return shuffleOrder.map(i => base[i]).filter(Boolean);
     }
     return base;
-  }, [selectedCategory, selectedPriority, shuffled, shuffleOrder]);
+  }, [selectedCategory, selectedPriorities, shuffled, shuffleOrder]);
 
   const card = filtered[currentIndex];
 
@@ -84,9 +91,14 @@ export default function Flashcards({ data = [], syntaxMode = 'sql', storagePrefi
     setShuffleOrder([]);
   };
 
-  const handlePriorityChange = (priority) => {
-    setSelectedPriority(priority);
-    localStorage.setItem(`${storagePrefix}_priority`, priority);
+  const handlePriorityToggle = (priority) => {
+    const isOn = selectedPriorities.includes(priority);
+    if (isOn && selectedPriorities.length === 1) return;
+    const next = isOn
+      ? selectedPriorities.filter(p => p !== priority)
+      : [...selectedPriorities, priority];
+    setSelectedPriorities(next);
+    localStorage.setItem(`${storagePrefix}_priority`, JSON.stringify(next));
     setCurrentIndex(0);
     setShowAnswer(false);
     setShuffled(false);
@@ -100,40 +112,48 @@ export default function Flashcards({ data = [], syntaxMode = 'sql', storagePrefi
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className="text-gray-400 text-sm font-medium">Show:</span>
           <button
-            onClick={() => handlePriorityChange('core')}
+            onClick={() => handlePriorityToggle('core')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              selectedPriority === 'core'
+              selectedPriorities.includes('core')
                 ? 'bg-amber-600 text-white ring-2 ring-amber-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            Core Only ({priorityConfig.core.count})
+            Core ({priorityConfig.core.count})
           </button>
           <button
-            onClick={() => handlePriorityChange('important')}
+            onClick={() => handlePriorityToggle('important')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              selectedPriority === 'important'
+              selectedPriorities.includes('important')
                 ? 'bg-sky-600 text-white ring-2 ring-sky-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            + Important ({priorityConfig.important.count})
+            Important ({priorityConfig.important.count})
           </button>
           <button
-            onClick={() => handlePriorityChange('all')}
+            onClick={() => handlePriorityToggle('extra')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              selectedPriority === 'all'
+              selectedPriorities.includes('extra')
                 ? 'bg-gray-500 text-white ring-2 ring-gray-400/50'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            All ({flashcards.length})
+            Extras ({priorityConfig.extra.count})
           </button>
         </div>
         <p className="text-gray-500 text-xs">
-          {selectedPriority === 'core' && "Core topics — most likely to be asked."}
-          {selectedPriority === 'important' && "Core + important follow-ups. Study these if you have time."}
-          {selectedPriority === 'all' && "Everything including extras. Only if you've nailed the core."}
+          {(() => {
+            const s = ['core', 'important', 'extra'].filter(p => selectedPriorities.includes(p));
+            if (s.length === 3) return "Everything — core, important, and extras.";
+            if (s.join() === 'core') return "Core topics — most likely to be asked.";
+            if (s.join() === 'important') return "Important follow-ups only.";
+            if (s.join() === 'extra') return "Extras only — nice to know.";
+            if (s.join() === 'core,important') return "Core + important follow-ups.";
+            if (s.join() === 'core,extra') return "Core + extras.";
+            if (s.join() === 'important,extra') return "Important follow-ups + extras.";
+            return "";
+          })()}
         </p>
       </div>
 
