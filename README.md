@@ -1,16 +1,36 @@
-# React + Vite
+# Interview Prep
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser study app with flashcards for SQL and LINQ, C#, .NET, Python, general interview questions and revision. The SQL Simulator runs a local SQLite database through sql.js and offers challenges, hints, solutions and a free-query mode.
 
-Currently, two official plugins are available:
+![SQL flashcards](docs/screenshots/flashcards.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![SQL Simulator](docs/screenshots/simulator.png)
 
-## React Compiler
+![Study workflow diagram](docs/workflow.svg)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run locally
 
-## Expanding the ESLint configuration
+```powershell
+npm ci
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Open the Vite URL printed in the terminal. `npm run build` creates `dist/`; `npm run preview` serves that build. `npm run lint` runs ESLint.
+
+## Study
+
+Choose a topic tab. In a flashcard deck, use Left/Right to move and Space to flip. The SQL/LINQ toggle changes the relevant study presentation. In the simulator, select a challenge, enter a query, run it and inspect the returned rows. Hints, explanations and the supplied solution can be revealed separately.
+
+Browser local storage retains selected tabs, syntax mode and deck state. The simulator initializes its sample database in memory; it is a practice environment rather than a connection to an external database. Its LINQ conversion supports the patterns implemented in `src/utils/linqToSql.js`, not arbitrary C# execution. The SQLite WebAssembly binary is served from `public/sql-wasm.wasm`.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `src/App.jsx` | Topic navigation, syntax choice and keyboard controls |
+| `src/components/Flashcards.jsx` | Study decks and local deck state |
+| `src/components/SqlSimulator.jsx` | SQLite practice interface |
+| `src/data/` | Flashcards, challenges and database setup |
+| `src/utils/linqToSql.js` | Supported LINQ-to-SQL conversions |
+| `public/` | Local WebAssembly engine and static assets |
+| Root study-plan Markdown files | Longer interview preparation notes |
